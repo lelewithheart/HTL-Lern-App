@@ -1,0 +1,44 @@
+version: "3.9"
+
+# NOTE: Populate a .env file (see .env.example) with strong secrets before deploying.
+services:
+  mysql_db:
+    image: mysql:8.0
+    container_name: htl_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-lernapp}
+      MYSQL_USER: ${MYSQL_USER:-lernapp}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-lernapp123}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${MYSQL_USER:-lernapp}", "-p${MYSQL_PASSWORD:-lernapp123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  fastapi_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: htl_fastapi
+    restart: unless-stopped
+    depends_on:
+      mysql_db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-lernapp}:${MYSQL_PASSWORD:-lernapp123}@mysql_db:3306/${MYSQL_DATABASE:-lernapp}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434/api/generate}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+
+volumes:
+  mysql_data:

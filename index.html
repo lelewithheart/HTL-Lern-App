@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTL Lern-App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+
+<!-- =====================================================================
+     AUTH SCREEN
+===================================================================== -->
+<div id="auth-screen" class="flex items-center justify-center min-h-screen">
+  <div class="bg-white rounded-2xl shadow-lg w-full max-w-md p-8">
+    <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">🎓 HTL Lern-App</h1>
+
+    <!-- Tabs -->
+    <div class="flex mb-6 border-b">
+      <button id="tab-login" onclick="showTab('login')"
+        class="flex-1 py-2 font-semibold text-blue-600 border-b-2 border-blue-600">
+        Anmelden
+      </button>
+      <button id="tab-register" onclick="showTab('register')"
+        class="flex-1 py-2 font-semibold text-gray-400">
+        Registrieren
+      </button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="login-form">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Benutzername</label>
+        <input id="login-username" type="text" placeholder="Benutzername"
+          class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      </div>
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Passwort</label>
+        <input id="login-password" type="password" placeholder="Passwort"
+          class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      </div>
+      <button onclick="doLogin()"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition">
+        Anmelden
+      </button>
+      <p id="login-error" class="text-red-500 text-sm mt-3 hidden"></p>
+    </div>
+
+    <!-- Register Form -->
+    <div id="register-form" class="hidden">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Benutzername</label>
+        <input id="reg-username" type="text" placeholder="Benutzername"
+          class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Passwort</label>
+        <input id="reg-password" type="password" placeholder="Passwort"
+          class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      </div>
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Klasse</label>
+        <select id="reg-class"
+          class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <option value="">-- Klasse wählen --</option>
+        </select>
+      </div>
+      <button onclick="doRegister()"
+        class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition">
+        Registrieren
+      </button>
+      <p id="reg-error" class="text-red-500 text-sm mt-3 hidden"></p>
+      <p id="reg-success" class="text-green-600 text-sm mt-3 hidden"></p>
+    </div>
+  </div>
+</div>
+
+<!-- =====================================================================
+     APP SHELL (shown after login)
+===================================================================== -->
+<div id="app-shell" class="hidden min-h-screen flex flex-col">
+
+  <!-- Navbar -->
+  <nav class="bg-blue-700 text-white px-6 py-3 flex items-center justify-between shadow">
+    <span class="text-xl font-bold">🎓 HTL Lern-App</span>
+    <div class="flex items-center gap-4">
+      <span id="nav-username" class="text-sm"></span>
+      <span id="nav-role"
+        class="text-xs bg-white text-blue-700 font-semibold px-2 py-0.5 rounded-full uppercase"></span>
+      <button onclick="doLogout()"
+        class="text-sm bg-white text-blue-700 font-semibold px-3 py-1 rounded-lg hover:bg-blue-50 transition">
+        Abmelden
+      </button>
+    </div>
+  </nav>
+
+  <!-- ----------------------------------------------------------------
+       STUDENT VIEW
+  ---------------------------------------------------------------- -->
+  <div id="student-view" class="hidden flex-1 p-6 max-w-4xl mx-auto w-full">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">Meine Fragen</h2>
+
+    <!-- Progress bar -->
+    <div class="bg-white rounded-xl shadow p-4 mb-6">
+      <div class="flex justify-between mb-1 text-sm font-medium text-gray-600">
+        <span>Fortschritt</span>
+        <span id="progress-label">0 / 0 beantwortet</span>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-3">
+        <div id="progress-bar" class="bg-blue-500 h-3 rounded-full transition-all" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div id="questions-container" class="space-y-4"></div>
+  </div>
+
+  <!-- ----------------------------------------------------------------
+       CLASS ADMIN VIEW
+  ---------------------------------------------------------------- -->
+  <div id="class-admin-view" class="hidden flex-1 p-6 max-w-5xl mx-auto w-full">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">Klassen-Admin Dashboard</h2>
+
+    <!-- Upload Center -->
+    <div class="bg-white rounded-xl shadow p-6 mb-8">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">📤 Upload Center – Lernstoff</h3>
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Fach</label>
+          <input id="sync-subject" type="text" placeholder="z.B. Mathematik"
+            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <div class="flex items-end">
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input id="sync-archive" type="checkbox" class="w-4 h-4 rounded" />
+            Alte Fragen archivieren
+          </label>
+        </div>
+      </div>
+      <textarea id="sync-stoff" rows="8" placeholder="Lernstoff / Skript hier einfügen..."
+        class="w-full border rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y font-mono text-sm"></textarea>
+      <button onclick="doSyncContent()"
+        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition">
+        KI-Fragen generieren
+      </button>
+      <div id="sync-status" class="mt-3 text-sm hidden"></div>
+    </div>
+
+    <!-- Questions Table -->
+    <div class="bg-white rounded-xl shadow p-6 mb-8">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-gray-700">📋 Fragen-Übersicht</h3>
+        <button onclick="loadAdminQuestions()"
+          class="text-sm text-blue-600 hover:underline">Aktualisieren</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+            <tr>
+              <th class="px-4 py-2">ID</th>
+              <th class="px-4 py-2">Fach</th>
+              <th class="px-4 py-2">Typ</th>
+              <th class="px-4 py-2">Fragetext</th>
+              <th class="px-4 py-2">Status</th>
+              <th class="px-4 py-2">Aktion</th>
+            </tr>
+          </thead>
+          <tbody id="questions-table-body" class="divide-y divide-gray-100"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Student Stats -->
+    <div class="bg-white rounded-xl shadow p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-gray-700">📊 Schüler-Fortschritt</h3>
+        <button onclick="loadAdminStats()"
+          class="text-sm text-blue-600 hover:underline">Aktualisieren</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+            <tr>
+              <th class="px-4 py-2">Schüler</th>
+              <th class="px-4 py-2">Beantwortet</th>
+              <th class="px-4 py-2">Ø Punkte</th>
+            </tr>
+          </thead>
+          <tbody id="stats-table-body" class="divide-y divide-gray-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ----------------------------------------------------------------
+       SUPER ADMIN VIEW
+  ---------------------------------------------------------------- -->
+  <div id="super-admin-view" class="hidden flex-1 p-6 max-w-5xl mx-auto w-full">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">Super-Admin Dashboard</h2>
+
+    <div class="bg-white rounded-xl shadow p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-gray-700">👥 Benutzerverwaltung</h3>
+        <button onclick="loadUsers()"
+          class="text-sm text-blue-600 hover:underline">Aktualisieren</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+            <tr>
+              <th class="px-4 py-2">ID</th>
+              <th class="px-4 py-2">Benutzername</th>
+              <th class="px-4 py-2">Rolle</th>
+              <th class="px-4 py-2">Klasse</th>
+              <th class="px-4 py-2">Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="users-table-body" class="divide-y divide-gray-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end app-shell -->
+
+<!-- =====================================================================
+     JAVASCRIPT
+===================================================================== -->
+<script>
+  // ----- State -----
+  const API = '';  // same origin
+  let currentUser = null;
+
+  function getToken() { return localStorage.getItem('token'); }
+  function setToken(t) { localStorage.setItem('token', t); }
+  function clearToken() { localStorage.removeItem('token'); }
+
+  function authHeaders() {
+    return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() };
+  }
+
+  async function apiFetch(path, options = {}) {
+    const res = await fetch(API + path, options);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || res.statusText);
+    }
+    return res.json();
+  }
+
+  // ----- Auth Tab Switching -----
+  function showTab(tab) {
+    document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+    document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
+    document.getElementById('tab-login').className =
+      'flex-1 py-2 font-semibold ' + (tab === 'login' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-400');
+    document.getElementById('tab-register').className =
+      'flex-1 py-2 font-semibold ' + (tab === 'register' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-400');
+  }
+
+  // ----- Init: load classes for dropdown -----
+  async function loadClasses() {
+    try {
+      const classes = await apiFetch('/classes');
+      const sel = document.getElementById('reg-class');
+      sel.innerHTML = '<option value="">-- Klasse wählen --</option>';
+      classes.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        sel.appendChild(opt);
+      });
+    } catch (e) {
+      console.warn('Could not load classes:', e);
+    }
+  }
+
+  // ----- Login -----
+  async function doLogin() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-error');
+    errEl.classList.add('hidden');
+    try {
+      const data = await apiFetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      setToken(data.access_token);
+      currentUser = { id: data.user_id, role: data.role, class_id: data.class_id, username };
+      localStorage.setItem('user', JSON.stringify(currentUser));
+      showApp();
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.classList.remove('hidden');
+    }
+  }
+
+  // ----- Register -----
+  async function doRegister() {
+    const username = document.getElementById('reg-username').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const classId = document.getElementById('reg-class').value || null;
+    const errEl = document.getElementById('reg-error');
+    const okEl = document.getElementById('reg-success');
+    errEl.classList.add('hidden');
+    okEl.classList.add('hidden');
+    try {
+      await apiFetch('/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, class_id: classId ? parseInt(classId) : null }),
+      });
+      okEl.textContent = 'Registrierung erfolgreich! Bitte jetzt anmelden.';
+      okEl.classList.remove('hidden');
+      showTab('login');
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.classList.remove('hidden');
+    }
+  }
+
+  // ----- Logout -----
+  function doLogout() {
+    clearToken();
+    localStorage.removeItem('user');
+    currentUser = null;
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('app-shell').classList.add('hidden');
+    hideAllViews();
+  }
+
+  function hideAllViews() {
+    ['student-view', 'class-admin-view', 'super-admin-view'].forEach(id =>
+      document.getElementById(id).classList.add('hidden')
+    );
+  }
+
+  // ----- Show App -----
+  function showApp() {
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('app-shell').classList.remove('hidden');
+    document.getElementById('nav-username').textContent = currentUser.username;
+    document.getElementById('nav-role').textContent = currentUser.role;
+    hideAllViews();
+
+    if (currentUser.role === 'admin') {
+      document.getElementById('super-admin-view').classList.remove('hidden');
+      loadUsers();
+    } else if (currentUser.role === 'class_admin') {
+      document.getElementById('class-admin-view').classList.remove('hidden');
+      loadAdminQuestions();
+      loadAdminStats();
+    } else {
+      document.getElementById('student-view').classList.remove('hidden');
+      loadQuestions();
+    }
+  }
+
+  // ================================================================
+  //  STUDENT LOGIC
+  // ================================================================
+
+  let questions = [];
+  let progressMap = {};
+
+  async function loadQuestions() {
+    try {
+      questions = await apiFetch('/questions/active', { headers: authHeaders() });
+      const progressData = await apiFetch('/my-progress', { headers: authHeaders() });
+      progressMap = {};
+      progressData.forEach(p => { progressMap[p.question_id] = p; });
+      renderQuestions();
+      updateProgressBar();
+    } catch (e) {
+      document.getElementById('questions-container').innerHTML =
+        `<p class="text-red-500">${e.message}</p>`;
+    }
+  }
+
+  function updateProgressBar() {
+    const answered = Object.keys(progressMap).length;
+    const total = questions.length;
+    const pct = total ? Math.round(answered / total * 100) : 0;
+    document.getElementById('progress-label').textContent = `${answered} / ${total} beantwortet`;
+    document.getElementById('progress-bar').style.width = pct + '%';
+  }
+
+  function renderQuestions() {
+    const container = document.getElementById('questions-container');
+    if (!questions.length) {
+      container.innerHTML = '<p class="text-gray-500">Keine aktiven Fragen vorhanden.</p>';
+      return;
+    }
+    container.innerHTML = '';
+    questions.forEach(q => {
+      const prog = progressMap[q.id];
+      const card = document.createElement('div');
+      card.className = 'bg-white rounded-xl shadow p-5';
+      card.id = 'q-card-' + q.id;
+
+      let answerHtml = '';
+      if (q.type === 'mc' && Array.isArray(q.options)) {
+        answerHtml = q.options.map((opt, idx) => `
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="mc-${q.id}" value="${idx}"
+              class="w-4 h-4" ${prog && String(prog.given_answer) === String(idx) ? 'checked' : ''} />
+            <span>${escHtml(opt)}</span>
+          </label>
+        `).join('');
+        answerHtml = `<div class="space-y-2 mt-3">${answerHtml}</div>`;
+      } else {
+        answerHtml = `
+          <textarea id="open-${q.id}" rows="4" placeholder="Deine Antwort..."
+            class="w-full border rounded-lg px-3 py-2 mt-3 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-sm"
+          >${prog ? escHtml(prog.given_answer || '') : ''}</textarea>
+        `;
+      }
+
+      if (prog && prog.score !== null) {
+        let bgClass = 'bg-red-50 border-red-200';
+        let textClass = 'text-red-700';
+        if (prog.score >= 70) { bgClass = 'bg-green-50 border-green-200'; textClass = 'text-green-700'; }
+        else if (prog.score >= 40) { bgClass = 'bg-yellow-50 border-yellow-200'; textClass = 'text-yellow-700'; }
+        feedbackHtml = `
+          <div class="mt-3 p-3 border rounded-lg ${bgClass}">
+            <p class="font-semibold ${textClass}">Punkte: ${prog.score}/100</p>
+            <p class="text-sm text-gray-700 mt-1">${escHtml(prog.ai_feedback || '')}</p>
+          </div>`;
+      }
+
+      const typeBadge = q.type === 'mc'
+        ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">MC</span>'
+        : '<span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Offen</span>';
+
+      card.innerHTML = `
+        <div class="flex items-start justify-between gap-2 mb-1">
+          <p class="font-medium text-gray-800">${escHtml(q.text)}</p>
+          ${typeBadge}
+        </div>
+        <p class="text-xs text-gray-400 mb-2">Fach: ${escHtml(q.subject)}</p>
+        ${answerHtml}
+        ${feedbackHtml}
+        <button onclick="submitAnswer(${q.id})"
+          class="mt-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition">
+          Absenden
+        </button>
+        <span id="submit-msg-${q.id}" class="text-sm ml-2 hidden"></span>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  async function submitAnswer(qId) {
+    const q = questions.find(x => x.id === qId);
+    let givenAnswer;
+    if (q.type === 'mc') {
+      const sel = document.querySelector(`input[name="mc-${qId}"]:checked`);
+      if (!sel) { alert('Bitte eine Antwort auswählen.'); return; }
+      givenAnswer = sel.value;
+    } else {
+      givenAnswer = document.getElementById('open-' + qId).value.trim();
+      if (!givenAnswer) { alert('Bitte eine Antwort eingeben.'); return; }
+    }
+
+    const msgEl = document.getElementById('submit-msg-' + qId);
+    msgEl.textContent = 'Wird bewertet...';
+    msgEl.className = 'text-sm ml-2 text-gray-400';
+    msgEl.classList.remove('hidden');
+
+    try {
+      const result = await apiFetch('/submit', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ question_id: qId, given_answer: givenAnswer }),
+      });
+      progressMap[qId] = { question_id: qId, given_answer: givenAnswer, score: result.score, ai_feedback: result.feedback };
+      renderQuestions();
+      updateProgressBar();
+    } catch (e) {
+      msgEl.textContent = 'Fehler: ' + e.message;
+      msgEl.className = 'text-sm ml-2 text-red-500';
+    }
+  }
+
+  // ================================================================
+  //  CLASS ADMIN LOGIC
+  // ================================================================
+
+  async function doSyncContent() {
+    const subject = document.getElementById('sync-subject').value.trim();
+    const stoff = document.getElementById('sync-stoff').value.trim();
+    const archiveOld = document.getElementById('sync-archive').checked;
+    const statusEl = document.getElementById('sync-status');
+
+    if (!subject || !stoff) { alert('Bitte Fach und Lernstoff eingeben.'); return; }
+
+    statusEl.textContent = '⏳ KI generiert Fragen... (kann einige Minuten dauern)';
+    statusEl.className = 'mt-3 text-sm text-blue-600';
+    statusEl.classList.remove('hidden');
+
+    try {
+      const result = await apiFetch('/admin/sync-content', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ subject, stoff, archive_old: archiveOld }),
+      });
+      statusEl.textContent = `✅ ${result.created} neue Fragen für "${result.subject}" erstellt.`;
+      statusEl.className = 'mt-3 text-sm text-green-600';
+      loadAdminQuestions();
+    } catch (e) {
+      statusEl.textContent = '❌ Fehler: ' + e.message;
+      statusEl.className = 'mt-3 text-sm text-red-500';
+    }
+  }
+
+  async function loadAdminQuestions() {
+    try {
+      const qs = await apiFetch('/admin/questions', { headers: authHeaders() });
+      const tbody = document.getElementById('questions-table-body');
+      tbody.innerHTML = '';
+      qs.forEach(q => {
+        const tr = document.createElement('tr');
+        tr.className = q.is_archived ? 'bg-gray-50 text-gray-400' : '';
+        tr.innerHTML = `
+          <td class="px-4 py-2">${q.id}</td>
+          <td class="px-4 py-2">${escHtml(q.subject)}</td>
+          <td class="px-4 py-2">${q.type === 'mc' ? 'MC' : 'Offen'}</td>
+          <td class="px-4 py-2 max-w-xs truncate">${escHtml(q.text)}</td>
+          <td class="px-4 py-2">
+            ${q.is_archived
+              ? '<span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Archiviert</span>'
+              : '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Aktiv</span>'}
+          </td>
+          <td class="px-4 py-2">
+            ${q.is_archived
+              ? `<button onclick="unarchiveQuestion(${q.id})"
+                   class="text-xs text-blue-600 hover:underline">De-Archivieren</button>`
+              : ''}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } catch (e) {
+      console.error('Could not load questions:', e);
+    }
+  }
+
+  async function unarchiveQuestion(qId) {
+    try {
+      await apiFetch(`/admin/questions/${qId}/unarchive`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+      });
+      loadAdminQuestions();
+    } catch (e) {
+      alert('Fehler: ' + e.message);
+    }
+  }
+
+  async function loadAdminStats() {
+    try {
+      const stats = await apiFetch('/admin/stats', { headers: authHeaders() });
+      const tbody = document.getElementById('stats-table-body');
+      tbody.innerHTML = '';
+      if (!stats.length) {
+        tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-2 text-gray-400">Keine Schüler gefunden.</td></tr>';
+        return;
+      }
+      stats.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="px-4 py-2 font-medium">${escHtml(s.username)}</td>
+          <td class="px-4 py-2">${s.answered}</td>
+          <td class="px-4 py-2">${s.avg_score !== null ? s.avg_score + ' / 100' : '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } catch (e) {
+      console.error('Could not load stats:', e);
+    }
+  }
+
+  // ================================================================
+  //  SUPER ADMIN LOGIC
+  // ================================================================
+
+  async function loadUsers() {
+    try {
+      const users = await apiFetch('/admin/users', { headers: authHeaders() });
+      const tbody = document.getElementById('users-table-body');
+      tbody.innerHTML = '';
+      users.forEach(u => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="px-4 py-2">${u.id}</td>
+          <td class="px-4 py-2 font-medium">${escHtml(u.username)}</td>
+          <td class="px-4 py-2">
+            <select onchange="changeRole(${u.id}, this.value)"
+              class="border rounded px-2 py-1 text-sm">
+              ${['admin','class_admin','student'].map(r =>
+                `<option value="${r}" ${u.role === r ? 'selected' : ''}>${r}</option>`
+              ).join('')}
+            </select>
+          </td>
+          <td class="px-4 py-2">${u.class_id || '-'}</td>
+          <td class="px-4 py-2">
+            <button onclick="banUser(${u.id})"
+              class="text-xs bg-red-100 text-red-600 hover:bg-red-200 px-2 py-1 rounded font-semibold transition">
+              Ban
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } catch (e) {
+      console.error('Could not load users:', e);
+    }
+  }
+
+  async function changeRole(userId, role) {
+    try {
+      await apiFetch(`/admin/users/${userId}/role`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({ role }),
+      });
+    } catch (e) {
+      alert('Fehler: ' + e.message);
+      loadUsers();
+    }
+  }
+
+  async function banUser(userId) {
+    if (!confirm('Benutzer wirklich bannen?')) return;
+    try {
+      await apiFetch(`/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      loadUsers();
+    } catch (e) {
+      alert('Fehler: ' + e.message);
+    }
+  }
+
+  // ================================================================
+  //  Utils
+  // ================================================================
+
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ================================================================
+  //  Startup
+  // ================================================================
+
+  (async function init() {
+    await loadClasses();
+    const storedUser = localStorage.getItem('user');
+    const token = getToken();
+    if (storedUser && token) {
+      currentUser = JSON.parse(storedUser);
+      showApp();
+    }
+  })();
+</script>
+</body>
+</html>
